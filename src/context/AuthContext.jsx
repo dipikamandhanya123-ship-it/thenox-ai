@@ -3,6 +3,7 @@ import { onAuthStateChanged, signInWithPopup, signOut, createUserWithEmailAndPas
 import { auth, googleProvider, db } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 const Ctx = createContext(null);
 
@@ -16,10 +17,27 @@ export function AuthProvider({ children }) {
     return onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
-        const data = await loadUser(u.uid);
-        if (!data?.profileComplete) setNeedsProfile(true);
-        else setNeedsProfile(false);
+        // Sync with backend using fresh token
+        try {
+          await u.getIdToken(true); // Force refresh token
+          const res = await api.post('/api/auth/sync');
+          if (res.data.user) {
+            setUserData(res.data.user);
+            if (!res.data.user.profileComplete) setNeedsProfile(true);
+            else setNeedsProfile(false);
+          }
+        } catch {
+          // Fallback to Firestore direct
+          const snap = await getDoc(doc(db, 'users', u.uid));
+          if (snap.exists()) {
+            setUserData(snap.data());
+            if (!snap.data().profileComplete) setNeedsProfile(true);
+          } else {
+            setNeedsProfile(true);
+          }
+        }
       } else {
+        setUser(null);
         setUserData(null);
         setNeedsProfile(false);
       }
@@ -27,46 +45,27 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const loadUser = async (uid) => {
-    try {
-      const snap = await getDoc(doc(db, 'users', uid));
-      if (snap.exists()) { setUserData(snap.data()); return snap.data(); }
-    } catch {}
-    return null;
-  };
-
   const createUserDoc = async (u, extra = {}) => {
     const ref = doc(db, 'users', u.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
       const data = {
         uid: u.uid, email: u.email,
-        name: u.displayName || extra.name || '',
+        name: u.displayName || extra.name || u.email?.split('@')[0] || 'User',
         avatar: u.photoURL || '',
-        plan: 'free',
-        tokensUsedToday: 0,
-        tokensUsedMonth: 0,
-        messagesUsedToday: 0,
-        lastTokenReset: serverTimestamp(),
-        profileComplete: false,
-        theme: 'dark',
-        accentColor: '#8b5cf6',
-        workers: [],
-        connectors: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        plan: 'free', messagesUsedToday: 0, tokensUsedToday: 0,
+        workers: [], connectors: [], profileComplete: false,
+        theme: 'dark', accentColor: '#8b5cf6',
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
         ...extra
       };
       await setDoc(ref, data);
       setUserData(data);
-      setNeedsProfile(true);
-      return data;
     } else {
-      const d = snap.data();
-      setUserData(d);
-      if (!d.profileComplete) setNeedsProfile(true);
-      return d;
+      setUserData(snap.data());
     }
+    const d = (await getDoc(ref)).data();
+    if (!d?.profileComplete) setNeedsProfile(true);
   };
 
   const loginGoogle = async () => {
@@ -79,6 +78,7 @@ export function AuthProvider({ children }) {
   const loginEmail = async (email, password) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      toast.success('Welcome back! ✅');
     } catch (e) { toast.error(e.message); }
   };
 
@@ -94,14 +94,20 @@ export function AuthProvider({ children }) {
     try {
       const ref = doc(db, 'users', user.uid);
       await updateDoc(ref, { ...profileData, profileComplete: true, updatedAt: serverTimestamp() });
-      await loadUser(user.uid);
+      const snap = await getDoc(ref);
+      setUserData(snap.data());
       setNeedsProfile(false);
-      toast.success('Profile saved! Welcome to Thenox AI ✨');
+      toast.success('Welcome to Thenox AI! ✨');
     } catch (e) { toast.error(e.message); }
   };
 
   const logout = async () => { await signOut(auth); toast.success('Signed out'); };
-  const refreshUser = () => user && loadUser(user.uid);
+
+  const refreshUser = async () => {
+    if (!user) return;
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) setUserData(snap.data());
+  };
 
   return (
     <Ctx.Provider value={{ user, userData, loading, needsProfile, loginGoogle, loginEmail, registerEmail, completeProfile, logout, refreshUser }}>
