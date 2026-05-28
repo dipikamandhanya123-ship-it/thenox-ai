@@ -4,11 +4,45 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
   <meta name="theme-color" content="#0a0a14"/>
-  <meta name="description" content="Thenox AI - Your intelligent AI assistant"/>
+  <meta name="description" content="Thenox AI - Your powerful AI assistant"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>Thenox AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --accent: #8b5cf6;
+      --accent2: #a78bfa;
+      --bg: #0a0a14;
+      --bg2: #0f0f1e;
+      --bg3: #161626;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8e8f4;
+      --text2: rgba(255,255,255,0.5);
+      --text3: rgba(255,255,255,0.25);
+    }
+    .light-mode {
+      --bg: #f5f5ff;
+      --bg2: #ffffff;
+      --bg3: #ebebf8;
+      --border: rgba(0,0,0,0.08);
+      --text: #0a0a14;
+      --text2: rgba(0,0,0,0.5);
+      --text3: rgba(0,0,0,0.3);
+    }
+    html, body, #root { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+    body { overflow: hidden; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 4px; }
+    @keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:.4} 40%{transform:scale(1);opacity:1} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { animation: fadeIn 0.25s ease both; }
+    * { transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+    button { font-family: 'Inter', sans-serif; }
+    textarea { font-family: 'Inter', sans-serif; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
